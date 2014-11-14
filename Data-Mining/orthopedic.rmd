@@ -1,0 +1,81 @@
+```{r}
+hospital<-read.table("C:/Users/xchai/Desktop/Xiaomeng/488 Statistical Consultation/Individual Presentation/allhospital.txt", header=FALSE, sep=",",strip.white=TRUE, col.names = c("ZIP","HID","CITY","STATE", "BEDS","RBEDS","OUTV","ADM","SIR","SALESY","SALES12","HIP95","KNEE95","TH","TRAUMA","REHAB","HIP96","KNEE96","FEMUR96"))
+head(hospital)
+dim(hospital)
+
+
+#4 States are chosen for further analysis
+hosp<-hospital[hospital$STATE=="IL" | hospital$STATE=="IN" | hospital$STATE=="MI" | hospital$STATE=="WI",]
+dim(hosp)
+head(hosp)
+
+#transformation
+hosp$SALES<-ifelse(hosp$SALES12==0,"NA",log(1+hosp$SALES12))
+
+hosp$BEDS<-sqrt(hosp$BEDS)
+#head(hosp$BEDS)
+hosp$RBEDS<-sqrt(hosp$RBEDS)
+hosp$HIP95<-sqrt(hosp$HIP95)
+hosp$KNEE95<-sqrt(hosp$KNEE95)
+hosp$HIP96<-log(1+0.01*hosp$HIP96)
+hosp$KNEE96<-log(1+0.01*hosp$KNEE96)
+hosp$FEMUR96<-log(1+0.01*hosp$FEMUR96)
+hosp$OUTV<-log(1+0.001*hosp$OUTV)
+hosp$ADM<-log(1+0.001*hosp$ADM)
+hosp$SIR<-log(1+0.001*hosp$SIR)
+```
+
+
+**Factor analysis in two stages**
+```{r}
+dim(hosp)
+names(hosp)
+library(stats)
+attach(hosp)
+#stage 1 Factor Analysis--which factor score method to use?
+faset1<-subset(hosp,select=c(12,13,17:19))
+fa1<-factanal(faset1,1, rotation="varimax", scores="Bartlett")
+head(fa1$scores)
+names(fa1)
+
+fa1test<-factanal(faset1,1, rotation="varimax", scores="regression")
+head(fa1$scores)
+head(fa1test$scores)
+
+
+#stage 2 Factor Analysis
+faset2<-subset(hosp,select=c(5:9, 14:16))
+fa2<-factanal(faset2,2, rotation="varimax", scores="Bartlett")
+fa2
+head(fa2$scores)
+              
+#merge FA scores into hosp--final dataset is'merghosp'
+colnames(fa2$scores)<-c("Factor2", "Factor3")  
+
+m1<-merge(hosp, fa1$scores, by="row.names")  
+head(fa2$scores)
+m2<-merge(hosp, fa2$scores, by="row.names")
+
+merghosp<-merge(subset(m1, select=c(1:22)),subset(m2,select=c(1,22:23)),by="Row.names")
+dim(merghosp)
+```
+
+**PAM**
+```{r}
+library(cluster)
+attach(merghosp)
+plot(silhouette(pam(merghosp[,22:24],k=6)),main=paste("k = ", 6), do.n.k=FALSE)
+
+#PAM
+p0<-pam(merghosp,4)
+#summary(p0)
+str(si<-silhouette(p0))
+plot(si)
+
+#silhouette width
+
+
+```
+
+
+
