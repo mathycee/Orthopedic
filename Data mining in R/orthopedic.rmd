@@ -38,9 +38,10 @@ fa1<-factanal(faset1,1, rotation="varimax", scores="Bartlett")
 head(fa1$scores)
 names(fa1)
 
-fa1test<-factanal(faset1,1, rotation="varimax", scores="regression")
-head(fa1$scores)
-head(fa1test$scores)
+
+#fa1test<-factanal(faset1,1, rotation="varimax", scores="regression")
+#head(fa1$scores)
+#head(fa1test$scores)
 
 
 #stage 2 Factor Analysis
@@ -64,32 +65,58 @@ dim(merghosp)
 ```{r}
 library(cluster)
 attach(merghosp)
-plot(silhouette(pam(merghosp[,22:24],k=6)),main=paste("k = ", 6), do.n.k=FALSE)
+#plot(silhouette(pam(merghosp[,22:24],k=6)),main=paste("k = ", 6), do.n.k=FALSE)
 
 #PAM
-p0<-pam(merghosp,4)
+#p0<-pam(merghosp,4)
 #summary(p0)
-str(si<-silhouette(p0))
-plot(si)
+#str(si<-silhouette(p0))
+#plot(si)
 
 #silhouette width
 
 ## Use the silhouette widths for assessing the best number of clusters,
 
-asw <- numeric(20)
+knumber <- numeric(20)
 for (k in 2:20)
   {
-  asw[k] <- pam(merghosp[,22:24], k) $ silinfo $ avg.width
+  knumber[k] <- pam(merghosp[,22:24], k) $ silinfo $ avg.width
   }
-k.best <- which.max(asw)
+k.best <- which.max(knumber)
 cat("silhouette-optimal number of clusters:", k.best, "\n")
 
-plot(1:20, asw, type= "h", main = "PAM clustering assessment",
+plot(1:20, knumber, type= "h", main = "PAM clustering assessment",
      xlab= "k  (# clusters)", ylab = "average silhouette width")
 axis(1, k.best, paste("best",k.best,sep="\n"), col = "red", col.axis = "red")
 
-
+#choose 5 clusters
+k5<-pam(merghosp[,22:24], 5)$silinfo
+k5$clus.avg.widths
+k5$avg.width
+detach(merghosp)
 ```
 
+**RPART Analysis**
+
+```{r}
+library(rpart)
+attach(merghosp)
+hospfit<-rpart(SALES~Factor1+Factor2+Factor3, data=merghosp)
+pred<-predict(rpart(SALES~Factor1+Factor2+Factor3, data=merghosp))
+#summary(pred)
+table(pred)
+length(pred)
+
+fit2<-rpart(SALES~Factor1+Factor2+Factor3, data=merghosp, control=rpart.control(cp=.001))
+
+printcp(fit2)#cp table
+plotcp(fit2)#plot cross-validation results
+plot(fit2, uniform=TRUE, main="Regression Tree")
+text(fit2,cex=0.6)
+
+factor(pred)[1:10]
+as.numeric(factor(pred)[1:10])
+table(as.numeric(factor(pred)))
+```
 
 
