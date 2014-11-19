@@ -1,8 +1,8 @@
+
 ```{r}
 hospital<-read.table("C:/Users/xchai/Desktop/Xiaomeng/488 Statistical Consultation/Individual Presentation/allhospital.txt", header=FALSE, sep=",",strip.white=TRUE, col.names = c("ZIP","HID","CITY","STATE", "BEDS","RBEDS","OUTV","ADM","SIR","SALESY","SALES12","HIP95","KNEE95","TH","TRAUMA","REHAB","HIP96","KNEE96","FEMUR96"))
-head(hospital)
-dim(hospital)
-
+#head(hospital)
+#dim(hospital)
 
 #4 States are chosen for further analysis
 hosp<-hospital[hospital$STATE=="IL" | hospital$STATE=="IN" | hospital$STATE=="MI" | hospital$STATE=="WI",]
@@ -13,7 +13,6 @@ head(hosp)
 hosp$SALES<-ifelse(hosp$SALES12==0,"NA",log(1+hosp$SALES12))
 
 hosp$BEDS<-sqrt(hosp$BEDS)
-#head(hosp$BEDS)
 hosp$RBEDS<-sqrt(hosp$RBEDS)
 hosp$HIP95<-sqrt(hosp$HIP95)
 hosp$KNEE95<-sqrt(hosp$KNEE95)
@@ -32,24 +31,41 @@ dim(hosp)
 names(hosp)
 library(stats)
 attach(hosp)
-#stage 1 Factor Analysis--which factor score method to use?
+#stage 1 Factor Analysis
 faset1<-subset(hosp,select=c(12,13,17:19))
 fa1<-factanal(faset1,1, rotation="varimax", scores="Bartlett")
 head(fa1$scores)
 names(fa1)
-
-
-#fa1test<-factanal(faset1,1, rotation="varimax", scores="regression")
-#head(fa1$scores)
-#head(fa1test$scores)
-
 
 #stage 2 Factor Analysis
 faset2<-subset(hosp,select=c(5:9, 14:16))
 fa2<-factanal(faset2,2, rotation="varimax", scores="Bartlett")
 fa2
 head(fa2$scores)
-              
+```
+
+**PCA**
+```{r}
+pcaset1<-subset(hosp,select=c(12,13,17:19))
+pcafit1<-princomp(pcaset1, cor=TRUE)
+summary(pcafit1)
+loadings(pcafit1) # pc loadings 
+plot(pcafit1,type="lines") # scree plot 
+#pcafit1$scores # the principal components
+biplot(pcafit1)
+
+pcaset2<-subset(hosp,select=c(5:9, 14:16))
+pcafit2<-princomp(pcaset2, cor=TRUE)
+summary(pcafit2)
+loadings(pcafit2) # pc loadings 
+plot(pcafit2,type="lines") # scree plot 
+pcafit2$scores # the principal components
+biplot(pcafit2)
+```
+
+
+
+```{r}
 #merge FA scores into hosp--final dataset is'merghosp'
 colnames(fa2$scores)<-c("Factor2", "Factor3")  
 
@@ -96,27 +112,28 @@ k5$avg.width
 detach(merghosp)
 ```
 
-**RPART Analysis**
+**CART using RPART**
 
 ```{r}
 library(rpart)
 attach(merghosp)
-hospfit<-rpart(SALES~Factor1+Factor2+Factor3, data=merghosp)
+
 pred<-predict(rpart(SALES~Factor1+Factor2+Factor3, data=merghosp))
 #summary(pred)
-table(pred)
-length(pred)
+#table(pred)
+#length(pred)
 
 fit2<-rpart(SALES~Factor1+Factor2+Factor3, data=merghosp, control=rpart.control(cp=.001))
 
 printcp(fit2)#cp table
 plotcp(fit2)#plot cross-validation results
-plot(fit2, uniform=TRUE, main="Regression Tree")
-text(fit2,cex=0.6)
 
-factor(pred)[1:10]
-as.numeric(factor(pred)[1:10])
-table(as.numeric(factor(pred)))
+#prune tree
+pfit2<-prune(fit2,cp=0.0029)
+plot(pfit2,uniform=TRUE, main=" Pruned Regression Tree for Log(1+SALES12)")
+text(pfit2, all=T, cex=0.6)
 ```
+
+
 
 
